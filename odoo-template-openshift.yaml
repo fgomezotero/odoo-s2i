@@ -2,9 +2,9 @@
   apiVersion: v1
   kind: Template
   metadata:
-    name: odoo-openshift-mvilche
+    name: odoo-openshift
     labels:
-      template: odoo-openshift-mvilche
+      template: odoo-openshift
       autor: "Martin_Fabrizzio_Vilche"
     annotations:
       openshift.io/display-name: "odoo-openshift-mvilche"
@@ -22,9 +22,7 @@
 
   objects:
 
-
 ##################### odoo
-
 
   - apiVersion: v1
     data:
@@ -73,9 +71,6 @@
         name: odoo
         weight: 100
       wildcardPolicy: None
-
-
-
 
   - apiVersion: v1
     kind: DeploymentConfig
@@ -137,7 +132,9 @@
                   name: odoo
                 - mountPath: /opt/odoo/datadir
                   name: odoo-datadir
-                  subPath: odoo-datadir                 
+                  subPath: odoo-datadir
+                - mountPath: /opt/odoo/custom_addons/
+                  name: odoo-addons
               ports:
                 - containerPort: 8070
                   protocol: TCP
@@ -158,7 +155,10 @@
               name: odoo
             - name: odoo-datadir
               persistentVolumeClaim:
-                claimName: odoo-data          
+                claimName: vol05-odoodesa-data
+            - name: odoo-addons
+              persistentVolumeClaim:
+                claimName: vol05-odoodesa-customaddons
       test: false
       triggers:
         - type: ConfigChange
@@ -239,7 +239,7 @@
           volumes:
             - name: postgresql-1
               persistentVolumeClaim:
-                claimName: odoo-data
+                claimName: vol05-odoodesa-db
       test: false
       triggers:
         - type: ConfigChange
@@ -251,8 +251,6 @@
               kind: ImageStreamTag
               name: 'postgresql:${POSTGRES_VERSION}'
           type: ImageChange
-
-
 
   - apiVersion: v1
     kind: Service
@@ -272,8 +270,6 @@
       sessionAffinity: None
       type: ClusterIP
 
-
-
   - apiVersion: v1
     kind: ImageStream
     metadata:
@@ -284,8 +280,6 @@
             from:
                 kind: DockerImage
                 name: centos/postgresql-${POSTGRES_VERSION}-centos7:latest
-
-
 
   - apiVersion: v1
     kind: BuildConfig
@@ -309,8 +303,8 @@
           uri: ${REPO_GIT}
           ref: ${BRANCH_GIT}
         type: Git
-        sourceSecret:
-          name: ${SOURCE_SECRET}
+#        sourceSecret:
+#          name: ${SOURCE_SECRET}
       strategy:
         sourceStrategy:
           from:
@@ -324,8 +318,6 @@
             from:
               kind: "ImageStreamTag"
               name: odoo-s2i:${ODOO_VERSION}
-
-
 
   - apiVersion: v1
     kind: BuildConfig
@@ -351,7 +343,6 @@
       triggers:
         - type: "ConfigChange"        
 
-
   - apiVersion: v1
     kind: ImageStream
     metadata:
@@ -369,24 +360,23 @@
     spec: {}
 
 
-  - apiVersion: v1
-    kind: PersistentVolumeClaim
-    metadata:
-      finalizers:
-      - kubernetes.io/pvc-protection
-      name: odoo-data
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 100Gi
-
+#  - apiVersion: v1
+#    kind: PersistentVolumeClaim
+#    metadata:
+#      finalizers:
+#      - kubernetes.io/pvc-protection
+#      name: odoo-data
+#    spec:
+#      accessModes:
+#      - ReadWriteOnce
+#      resources:
+#        requests:
+#          storage: 100Gi
 
   parameters:
     - name: ODOO_VERSION
       displayName: Versión de odoo a instalar
-      value: '11'
+      value: '12'
       required: true
     - name: POSTGRES_VERSION
       displayName: Versión de postgres a instalar
@@ -400,7 +390,7 @@
       displayName: Nombre del branch
       value: 'master'
       required: true
-    - name: SOURCE_SECRET
-      displayName: Nombre del secret
-      value: 'gitlab'
-      required: true
+#    - name: SOURCE_SECRET
+#      displayName: Nombre del secret
+#      value: 'gitlab'
+#      required: true
